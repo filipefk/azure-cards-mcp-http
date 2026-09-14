@@ -1,0 +1,116 @@
+{
+  "info": {
+    "_postman_id": "247dca7f-64d7-442e-a4e8-0f23119a2288",
+    "name": "GenerateApiKey",
+    "description": "Endpoints desprotegidos do AzureCardsMcpHttp para gerar e decodificar a API Key do header x-api-key.\n\nVariaveis usadas (ver GenerateApiKey.postman_environment.json): baseUrl, mcpApiKey, azureUrl, azureApiKey e apiKey.\n\nO POST /api-key/generate salva automaticamente a chave gerada na variavel de ambiente apiKey, que o POST /api-key/decode consome.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "6513668",
+    "_collection_link": "https://go.postman.co/collection/6513668-247dca7f-64d7-442e-a4e8-0f23119a2288?source=collection_link"
+  },
+  "item": [
+    {
+      "name": "POST /api-key/generate",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const json = pm.response.json();\n\nif (json && json.apiKey) {\n    if (pm.environment.name) {\n        pm.environment.set(\"apiKey\", json.apiKey);\n        console.log(\"apiKey salva no environment '\" + pm.environment.name + \"'.\");\n    } else {\n        pm.collectionVariables.set(\"apiKey\", json.apiKey);\n        console.log(\"Nenhum environment selecionado: apiKey salva como variavel da collection.\");\n    }\n}"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"mcpApiKey\": \"{{mcpApiKey}}\",\n    \"azureUrl\": \"{{azureUrl}}\",\n    \"azureApiKey\": \"{{azureApiKey}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api-key/generate",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api-key",
+            "generate"
+          ]
+        },
+        "description": "Gera a API Key unica do header x-api-key a partir de [mcpApiKey, azureUrl, azureApiKey].\n\nazureUrl e azureApiKey sao opcionais (podem ir vazios); mcpApiKey e obrigatorio, ausente ou em branco retorna 400.\n\nO script de teste salva a chave retornada na variavel de ambiente apiKey."
+      },
+      "response": []
+    },
+    {
+      "name": "POST /api-key/decode",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"Retornou mcpApiKey\", function () {",
+              "    pm.expect(pm.response.json()).to.have.property(\"mcpApiKey\");",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"apiKey\": \"{{apiKey}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api-key/decode",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api-key",
+            "decode"
+          ]
+        },
+        "description": "Desfaz a API Key e devolve { mcpApiKey, azureUrl, azureApiKey }. Chave invalida retorna 400."
+      },
+      "response": []
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5464"
+    },
+    {
+      "key": "apiKey",
+      "value": ""
+    }
+  ]
+}

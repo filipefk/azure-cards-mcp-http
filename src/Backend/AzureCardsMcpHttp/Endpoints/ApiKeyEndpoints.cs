@@ -2,17 +2,18 @@ using GeraApiKey;
 
 namespace AzureCardsMcpHttp.Endpoints;
 
-// Endpoints desprotegidos (fora de /mcp) para gerar uma API Key a partir de uma lista de valores e para desfazê-la.
-// São POST para os valores (segredos) irem no corpo, nunca na URL.
+// Endpoints desprotegidos (fora de /mcp) para gerar a API Key do header x-api-key e para desfazê-la.
+// O corpo é um DTO com os campos nomeados; a ordem em que eles viram a lista do GeraApiKey
+// fica em McpApiKey.ToValues/FromValues. São POST para os segredos irem no corpo, nunca na URL.
 public static class ApiKeyEndpoints
 {
-    public sealed record GenerateApiKeyRequest(List<string>? Values);
+    public sealed record GenerateApiKeyRequest(string? McpApiKey, string? AzureUrl, string? AzureApiKey);
 
     public sealed record GenerateApiKeyResponse(string ApiKey);
 
     public sealed record DecodeApiKeyRequest(string? ApiKey);
 
-    public sealed record DecodeApiKeyResponse(IReadOnlyList<string> Values);
+    public sealed record DecodeApiKeyResponse(string McpApiKey, string? AzureUrl, string? AzureApiKey);
 
     public static IEndpointRouteBuilder MapApiKeyEndpoints(this IEndpointRouteBuilder app)
     {
@@ -20,9 +21,14 @@ public static class ApiKeyEndpoints
 
         group.MapPost("/generate", (GenerateApiKeyRequest request) =>
         {
+            // Sem a chave MCP a key gerada nunca passaria no McpApiKeyMiddleware — falha aqui, com motivo.
+            if (string.IsNullOrWhiteSpace(request.McpApiKey))
+                return Results.BadRequest(new { error = "Informe o mcpApiKey." });
+
+            var apiKey = new McpApiKey(request.McpApiKey, request.AzureUrl, request.AzureApiKey);
             try
             {
-                return Results.Ok(new GenerateApiKeyResponse(ApiKeyGenerator.Generate(request.Values ?? [])));
+                return Results.Ok(new GenerateApiKeyResponse(ApiKeyGenerator.Generate(apiKey.ToValues())));
             }
             catch (ArgumentException ex)
             {
@@ -31,9 +37,13 @@ public static class ApiKeyEndpoints
         });
 
         group.MapPost("/decode", (DecodeApiKeyRequest request) =>
-            ApiKeyGenerator.TryParse(request.ApiKey, out var values)
-                ? Results.Ok(new DecodeApiKeyResponse(values))
-                : Results.BadRequest(new { error = "API Key inválida." }));
+        {
+            if (!ApiKeyGenerator.TryParse(request.ApiKey, out var values))
+                return Results.BadRequest(new { error = "API Key inválida." });
+
+            var apiKey = McpApiKey.FromValues(values);
+            return Results.Ok(new DecodeApiKeyResponse(apiKey.McpKey, apiKey.AzureUrl, apiKey.AzureApiKey));
+        });
 
         return app;
     }

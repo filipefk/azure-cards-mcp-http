@@ -49,14 +49,14 @@ A key é gerada pela biblioteca `GeraApiKey`: os valores são unidos por um cara
 Dois endpoints **sem autenticação** (fora de `/mcp`):
 
 ```bash
-curl -X POST http://localhost:5464/api-key/generate -H "Content-Type: application/json" -d "{\"values\":[\"minha-chave-mcp\",\"https://dev.azure.com/minha-org/meu-projeto\",\"<seu-PAT>\"]}"
+curl -X POST http://localhost:5464/api-key/generate -H "Content-Type: application/json" -d "{\"mcpApiKey\":\"minha-chave-mcp\",\"azureUrl\":\"https://dev.azure.com/minha-org/meu-projeto\",\"azureApiKey\":\"<seu-PAT>\"}"
 ```
 
 ```bash
 curl -X POST http://localhost:5464/api-key/decode -H "Content-Type: application/json" -d "{\"apiKey\":\"<key>\"}"
 ```
 
-`generate` recebe qualquer lista de strings (`{ "values": [...] }`) e devolve `{ "apiKey": "..." }`; `decode` faz o inverso e devolve `{ "values": [...] }` na mesma ordem. A mesma lista gera keys diferentes a cada chamada (semente aleatória), todas válidas.
+`generate` recebe o DTO `{ "mcpApiKey": "...", "azureUrl": "...", "azureApiKey": "..." }` e devolve `{ "apiKey": "..." }`; `decode` faz o inverso e devolve os três campos. Só `mcpApiKey` é obrigatório (sem ele, `400`): `azureUrl` e `azureApiKey` omitidos ou vazios saem como `null` no `decode` e fazem o servidor usar o Azure da configuração. Os mesmos valores geram keys diferentes a cada chamada (semente aleatória), todas válidas.
 
 ### Projeto e chave de acesso
 
@@ -106,7 +106,7 @@ Evite gravar a chave no `appsettings.json`; prefira variável de ambiente, user 
 
 ## Registrando no Claude Code
 
-Gere a key em `/api-key/generate` (com os três valores, ou só a chave MCP para usar o Azure configurado no servidor) e registre:
+Gere a key em `/api-key/generate` (com os três campos, ou só o `mcpApiKey` para usar o Azure configurado no servidor) e registre:
 
 ```bash
 claude mcp add --transport http azure-cards http://localhost:5464/mcp --header "x-api-key: <key>"
