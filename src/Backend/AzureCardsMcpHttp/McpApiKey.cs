@@ -31,12 +31,15 @@ public sealed class McpApiKey(string mcpKey, string? azureUrl, string? azureApiK
     public static bool TryRead(HttpContext? context, [NotNullWhen(true)] out McpApiKey? apiKey)
     {
         apiKey = null;
-        var header = context?.Request.Headers[HeaderName].FirstOrDefault();
+        var header = ReadHeader(context);
         if (!ApiKeyGenerator.TryParse(header, out var values)) return false;
 
         apiKey = FromValues(values);
         return true;
     }
+
+    public static string? ReadHeader(HttpContext? context) =>
+        context?.Request.Headers[HeaderName].FirstOrDefault();
 
     private static string? ValueAt(IReadOnlyList<string> values, int index) =>
         index < values.Count && !string.IsNullOrWhiteSpace(values[index]) ? values[index] : null;

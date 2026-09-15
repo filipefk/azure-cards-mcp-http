@@ -2,7 +2,9 @@ using GeraApiKey;
 
 namespace AzureCardsMcpHttp.Endpoints;
 
-// Endpoints desprotegidos (fora de /mcp) para gerar a API Key do header x-api-key e para desfazê-la.
+// Endpoints para gerar a API Key do header x-api-key e para desfazê-la. Protegidos pelo
+// McpApiKeyMiddleware em modo Raw: aqui o x-api-key é a chave MCP em texto puro, conferida
+// contra McpAuth:ApiKeys — a key gerada é justamente o que eles produzem/desfazem.
 // O corpo é um DTO com os campos nomeados; a ordem em que eles viram a lista do GeraApiKey
 // fica em McpApiKey.ToValues/FromValues. São POST para os segredos irem no corpo, nunca na URL.
 public static class ApiKeyEndpoints

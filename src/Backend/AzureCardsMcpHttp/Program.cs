@@ -70,7 +70,7 @@ if (configuration.GetValue("Shell:Enabled", false))
 var app = builder.Build();
 
 if (!configuration.GetSection("McpAuth:ApiKeys").GetChildren().Any(k => !string.IsNullOrEmpty(k.Value)))
-    app.Logger.LogWarning("Nenhuma chave em McpAuth:ApiKeys — todas as chamadas a /mcp serão rejeitadas (401).");
+    app.Logger.LogWarning("Nenhuma chave em McpAuth:ApiKeys — todas as chamadas a /mcp e /api-key serão rejeitadas (401).");
 
 if (!app.Environment.IsDevelopment())
     app.UseHttpsRedirection();
@@ -81,9 +81,15 @@ app.UseWhen(
     context => context.Request.Path.StartsWithSegments("/mcp"),
     appBuilder => appBuilder
         .UseMiddleware<McpTrafficLoggingMiddleware>()
-        .UseMiddleware<McpApiKeyMiddleware>());
+        .UseMiddleware<McpApiKeyMiddleware>(McpKeyFormat.Encoded));
 
-// Desprotegidos: geram e desfazem a x-api-key (/api-key/generate e /api-key/decode).
+// Os endpoints de API Key também exigem o x-api-key, mas com a chave MCP em texto puro: a key
+// gerada é o que eles produzem/desfazem. Sem o middleware de tráfego, para o PAT do corpo do
+// generate não ir para o log.
+app.UseWhen(
+    context => context.Request.Path.StartsWithSegments("/api-key"),
+    appBuilder => appBuilder.UseMiddleware<McpApiKeyMiddleware>(McpKeyFormat.Raw));
+
 app.MapApiKeyEndpoints();
 app.MapMcp("/mcp");
 

@@ -16,7 +16,7 @@
           "script": {
             "type": "text/javascript",
             "exec": [
-              "const json = pm.response.json();\n\nif (json && json.apiKey) {\n    if (pm.environment.name) {\n        pm.environment.set(\"apiKey\", json.apiKey);\n        console.log(\"apiKey salva no environment '\" + pm.environment.name + \"'.\");\n    } else {\n        pm.collectionVariables.set(\"apiKey\", json.apiKey);\n        console.log(\"Nenhum environment selecionado: apiKey salva como variavel da collection.\");\n    }\n}"
+              "const json = pm.response.json();\npm.environment.set(\"apiKey\", json.apiKey);"
             ]
           }
         }
@@ -27,6 +27,10 @@
           {
             "key": "Content-Type",
             "value": "application/json"
+          },
+          {
+            "key": "x-api-key",
+            "value": "{{mcpApiKey}}"
           }
         ],
         "body": {
@@ -54,29 +58,16 @@
     },
     {
       "name": "POST /api-key/decode",
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "pm.test(\"Status 200\", function () {",
-              "    pm.response.to.have.status(200);",
-              "});",
-              "",
-              "pm.test(\"Retornou mcpApiKey\", function () {",
-              "    pm.expect(pm.response.json()).to.have.property(\"mcpApiKey\");",
-              "});"
-            ]
-          }
-        }
-      ],
       "request": {
         "method": "POST",
         "header": [
           {
             "key": "Content-Type",
             "value": "application/json"
+          },
+          {
+            "key": "x-api-key",
+            "value": "{{mcpApiKey}}"
           }
         ],
         "body": {
@@ -99,6 +90,104 @@
           ]
         },
         "description": "Desfaz a API Key e devolve { mcpApiKey, azureUrl, azureApiKey }. Chave invalida retorna 400."
+      },
+      "response": []
+    },
+    {
+      "name": "1. Initialize",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function parseMcpResponse() {\n    var body = pm.response.text();\n    var dataLine = body.split('\\n').find(l => l.startsWith('data:'));\n    return JSON.parse(dataLine.replace(/^data:\\s*/, ''));\n}\n\n// Salva o session id retornado no header\nvar sessionId = pm.response.headers.get('mcp-session-id');\nif (sessionId) {\n    pm.environment.set('mcp_session_id', sessionId);\n    console.log('mcp-session-id salvo:', sessionId);\n} else {\n    console.warn('Header mcp-session-id não encontrado na resposta.');\n}\n\n// Valida que a resposta é 200 e tem result\npm.test('Status 200', function () {\n    pm.response.to.have.status(200);\n});\n\npm.test('Resposta contém result', function () {\n    var json = parseMcpResponse();\n    pm.expect(json).to.have.property('result');\n});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "x-api-key",
+            "value": "{{apiKey}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 1,\n  \"method\": \"initialize\",\n  \"params\": {\n    \"protocolVersion\": \"2024-11-05\",\n    \"capabilities\": {},\n    \"clientInfo\": {\n      \"name\": \"postman\",\n      \"version\": \"1.0\"\n    }\n  }\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/mcp",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "mcp"
+          ]
+        },
+        "description": "Inicia a sessão MCP. O `mcp-session-id` retornado no header é salvo automaticamente na variável de environment `mcp_session_id`."
+      },
+      "response": []
+    },
+    {
+      "name": "2. List Tools",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function parseMcpResponse() {\n    var body = pm.response.text();\n    var dataLine = body.split('\\n').find(l => l.startsWith('data:'));\n    return JSON.parse(dataLine.replace(/^data:\\s*/, ''));\n}\n\npm.test('Status 200', function () {\n    pm.response.to.have.status(200);\n});\n\npm.test('Resposta contém lista de tools', function () {\n    var json = parseMcpResponse();\n    pm.expect(json.result).to.have.property('tools');\n    pm.expect(json.result.tools).to.be.an('array');\n    console.log('Tools disponíveis:', json.result.tools.map(t => t.name));\n});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "x-api-key",
+            "value": "{{apiKey}}"
+          },
+          {
+            "key": "mcp-session-id",
+            "value": "{{mcp_session_id}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 2,\n  \"method\": \"tools/list\",\n  \"params\": {}\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/mcp",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "mcp"
+          ]
+        },
+        "description": "Lista todas as tools disponíveis no servidor MCP."
       },
       "response": []
     }

@@ -2,12 +2,15 @@
   <Folder Name="/Solution Items/">
     <File Path=".gitignore" />
     <File Path="CLAUDE.md" />
+    <File Path="Dockerfile" />
+    <File Path="GenerateApiKey.postman_collection.json" />
+    <File Path="GenerateApiKey.postman_environment.json" />
     <File Path="README.md" />
   </Folder>
   <Folder Name="/src/" />
   <Folder Name="/src/Backend/">
-    <Project Path="src/Backend/McpToolkit/McpToolkit.csproj" Id="4b9d67fd-2ac3-4e83-96d2-0adb4b662148" />
     <Project Path="src/Backend/AzureCardsMcpHttp/AzureCardsMcpHttp.csproj" />
     <Project Path="src/Backend/GeraApiKey/GeraApiKey.csproj" />
+    <Project Path="src/Backend/McpToolkit/McpToolkit.csproj" Id="4b9d67fd-2ac3-4e83-96d2-0adb4b662148" />
   </Folder>
 </Solution>

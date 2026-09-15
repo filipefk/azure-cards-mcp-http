@@ -40,20 +40,20 @@ Toda chamada a `/mcp` precisa de **um único header**, `x-api-key` — pensado p
 2. URL do projeto no Azure DevOps (opcional);
 3. chave do Azure DevOps — PAT ou token do Entra (opcional).
 
-Sem o header, com uma key que não decodifica, com `mcp_api_key` fora da lista ou com a lista **vazia**, a resposta é `401`.
+Sem o header, com uma key que não decodifica, com `mcp_api_key` fora da lista ou com a lista **vazia**, a resposta é `401`. Os endpoints `/api-key` também exigem o header, mas nele vai a `mcp_api_key` **em texto puro** (a key gerada é o que eles produzem/desfazem).
 
 A key é gerada pela biblioteca `GeraApiKey`: os valores são unidos por um caractere não digitável (U+001F), embaralhados (XOR com semente aleatória) e codificados em Base64Url — só `A-Z a-z 0-9 - _`, seguro para header. **É ofuscação, não criptografia**: quem tem a key recupera os valores (inclusive o PAT). Trate a key como um segredo.
 
 #### Gerando e desfazendo a key
 
-Dois endpoints **sem autenticação** (fora de `/mcp`):
+Dois endpoints protegidos: o header `x-api-key` leva a `mcp_api_key` em texto puro, conferida contra `McpAuth:ApiKeys` (fora da lista ou ausente → `401`).
 
 ```bash
-curl -X POST http://localhost:5464/api-key/generate -H "Content-Type: application/json" -d "{\"mcpApiKey\":\"minha-chave-mcp\",\"azureUrl\":\"https://dev.azure.com/minha-org/meu-projeto\",\"azureApiKey\":\"<seu-PAT>\"}"
+curl -X POST http://localhost:5464/api-key/generate -H "x-api-key: minha-chave-mcp" -H "Content-Type: application/json" -d "{\"mcpApiKey\":\"minha-chave-mcp\",\"azureUrl\":\"https://dev.azure.com/minha-org/meu-projeto\",\"azureApiKey\":\"<seu-PAT>\"}"
 ```
 
 ```bash
-curl -X POST http://localhost:5464/api-key/decode -H "Content-Type: application/json" -d "{\"apiKey\":\"<key>\"}"
+curl -X POST http://localhost:5464/api-key/decode -H "x-api-key: minha-chave-mcp" -H "Content-Type: application/json" -d "{\"apiKey\":\"<key>\"}"
 ```
 
 `generate` recebe o DTO `{ "mcpApiKey": "...", "azureUrl": "...", "azureApiKey": "..." }` e devolve `{ "apiKey": "..." }`; `decode` faz o inverso e devolve os três campos. Só `mcpApiKey` é obrigatório (sem ele, `400`): `azureUrl` e `azureApiKey` omitidos ou vazios saem como `null` no `decode` e fazem o servidor usar o Azure da configuração. Os mesmos valores geram keys diferentes a cada chamada (semente aleatória), todas válidas.
@@ -98,7 +98,7 @@ Evite gravar a chave no `appsettings.json`; prefira variável de ambiente, user 
 }
 ```
 
-- `McpAuth:ApiKeys` — chaves MCP aceitas (1º valor do `x-api-key`). Lista vazia rejeita todas as chamadas a `/mcp`. Via variável de ambiente: `McpAuth__ApiKeys__0`, `McpAuth__ApiKeys__1`...
+- `McpAuth:ApiKeys` — chaves MCP aceitas (1º valor do `x-api-key` em `/mcp`, header inteiro em `/api-key`). Lista vazia rejeita todas as chamadas a `/mcp` e a `/api-key`. Via variável de ambiente: `McpAuth__ApiKeys__0`, `McpAuth__ApiKeys__1`...
 - `ApiVersion` / `CommentsApiVersion` — ajuste para versões antigas do Azure DevOps Server.
 - `IgnoreSslErrors` — aceita certificado TLS inválido/autoassinado (Azure DevOps Server interno).
 - `Tools:*:Enabled` — desliga uma família inteira de tools (ela nem aparece no `tools/list`).
