@@ -77,6 +77,11 @@ if (!app.Environment.IsDevelopment())
 
 app.UseSerilogRequestLogging();
 
+// Página da raiz (wwwroot/index.html) para gerar/decodificar a API Key pelos endpoints /api-key.
+// É pública: a chave MCP é digitada nela e vai no header, os endpoints continuam protegidos.
+app.UseDefaultFiles();
+app.UseStaticFiles();
+
 app.UseWhen(
     context => context.Request.Path.StartsWithSegments("/mcp"),
     appBuilder => appBuilder

@@ -20,6 +20,7 @@ AzureCardsMcpHttp.slnx
     ├── GeraApiKey/                     # gera/desfaz a API Key única (lista de strings ⇄ string)
     │   └── ApiKeyGenerator.cs
     └── AzureCardsMcpHttp/              # host ASP.NET Core (Program.cs, middlewares, endpoints, appsettings)
+        └── wwwroot/index.html           # página para gerar/decodificar a API Key
 ```
 
 ## Rodando
@@ -46,7 +47,7 @@ A key é gerada pela biblioteca `GeraApiKey`: os valores são unidos por um cara
 
 #### Gerando e desfazendo a key
 
-Dois endpoints protegidos: o header `x-api-key` leva a `mcp_api_key` em texto puro, conferida contra `McpAuth:ApiKeys` (fora da lista ou ausente → `401`).
+Dois endpoints protegidos: o header `x-api-key` leva a `mcp_api_key` em texto puro, conferida contra `McpAuth:ApiKeys` (fora da lista ou ausente → `401`). Nos exemplos abaixo, troque `http://localhost:5464` pela URL onde o MCP estiver hospedado.
 
 ```bash
 curl -X POST http://localhost:5464/api-key/generate -H "x-api-key: minha-chave-mcp" -H "Content-Type: application/json" -d "{\"mcpApiKey\":\"minha-chave-mcp\",\"azureUrl\":\"https://dev.azure.com/minha-org/meu-projeto\",\"azureApiKey\":\"<seu-PAT>\"}"
@@ -55,6 +56,8 @@ curl -X POST http://localhost:5464/api-key/generate -H "x-api-key: minha-chave-m
 ```bash
 curl -X POST http://localhost:5464/api-key/decode -H "x-api-key: minha-chave-mcp" -H "Content-Type: application/json" -d "{\"apiKey\":\"<key>\"}"
 ```
+
+Ou pela página web na raiz do servidor (arquivo `wwwroot/index.html`), acessada pela URL onde o MCP estiver hospedado — ex.: `https://meu-servidor/` (rodando localmente, `http://localhost:5464/`): informe a chave MCP de autenticação e preencha os campos de **Gerar** ou **Decodificar**. A página é pública, mas só chama os endpoints acima (que exigem a chave) e não salva nada no navegador.
 
 `generate` recebe o DTO `{ "mcpApiKey": "...", "azureUrl": "...", "azureApiKey": "..." }` e devolve `{ "apiKey": "..." }`; `decode` faz o inverso e devolve os três campos. Só `mcpApiKey` é obrigatório (sem ele, `400`): `azureUrl` e `azureApiKey` omitidos ou vazios saem como `null` no `decode` e fazem o servidor usar o Azure da configuração. Os mesmos valores geram keys diferentes a cada chamada (semente aleatória), todas válidas.
 
@@ -106,7 +109,7 @@ Evite gravar a chave no `appsettings.json`; prefira variável de ambiente, user 
 
 ## Registrando no Claude Code
 
-Gere a key em `/api-key/generate` (com os três campos, ou só o `mcpApiKey` para usar o Azure configurado no servidor) e registre:
+Gere a key em `/api-key/generate` ou pela página web (com os três campos, ou só o `mcpApiKey` para usar o Azure configurado no servidor) e registre, trocando `http://localhost:5464` pela URL onde o MCP estiver hospedado (a página já mostra o comando pronto, com a URL certa):
 
 ```bash
 claude mcp add --transport http azure-cards http://localhost:5464/mcp --header "x-api-key: <key>"
