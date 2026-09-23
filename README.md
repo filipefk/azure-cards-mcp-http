@@ -1,6 +1,6 @@
 # Azure Cards MCP HTTP
 
-Servidor **MCP (Model Context Protocol) via HTTP** em .NET 10 para manipular cards (work items) do **Azure DevOps Boards**: ler, criar (inclusive pai + filhos), atualizar, vincular pai, buscar (filtros ou WIQL) e comentar.
+Servidor **MCP (Model Context Protocol) via HTTP** em .NET 10 para manipular cards (work items) do **Azure DevOps Boards**: ler, criar (inclusive pai + filhos), atualizar, vincular pai, buscar (filtros ou WIQL) e comentar. Inclui uma página web, na raiz do servidor, para gerar a `x-api-key` exigida pelo MCP.
 
 Construído sobre o template `ModeloMcpHttp` com o SDK oficial `ModelContextProtocol.AspNetCore`, usando a [API REST do Azure DevOps](https://learn.microsoft.com/azure/devops/integrate/how-to/call-rest-api) (`api-version=7.1`).
 
@@ -8,6 +8,8 @@ Construído sobre o template `ModeloMcpHttp` com o SDK oficial `ModelContextProt
 
 ```
 AzureCardsMcpHttp.slnx
+├── GenerateApiKey.postman_collection.json   # coleção do Postman (API Key + chamadas básicas do MCP)
+├── GenerateApiKey.postman_environment.json  # ambiente do Postman com as variáveis da coleção
 └── src/Backend/
     ├── McpToolkit/                     # tools MCP + cliente da API
     │   ├── McpClient.cs                 # chamadas REST ao Azure DevOps
@@ -29,7 +31,7 @@ AzureCardsMcpHttp.slnx
 dotnet run --project src/Backend/AzureCardsMcpHttp/AzureCardsMcpHttp.csproj
 ```
 
-O endpoint MCP fica em `http://localhost:5464/mcp` (perfil `http` do `launchSettings.json`).
+O endpoint MCP fica em `http://localhost:5464/mcp` (perfil `http` do `launchSettings.json`) e a página para gerar a `x-api-key` em `http://localhost:5464/`.
 
 ## Configuração
 
@@ -45,9 +47,20 @@ Sem o header, com uma key que não decodifica, com `mcp_api_key` fora da lista o
 
 A key é gerada pela biblioteca `GeraApiKey`: os valores são unidos por um caractere não digitável (U+001F), embaralhados (XOR com semente aleatória) e codificados em Base64Url — só `A-Z a-z 0-9 - _`, seguro para header. **É ofuscação, não criptografia**: quem tem a key recupera os valores (inclusive o PAT). Trate a key como um segredo.
 
-#### Gerando e desfazendo a key
+#### Página web
 
-Dois endpoints protegidos: o header `x-api-key` leva a `mcp_api_key` em texto puro, conferida contra `McpAuth:ApiKeys` (fora da lista ou ausente → `401`). Nos exemplos abaixo, troque `http://localhost:5464` pela URL onde o MCP estiver hospedado.
+A forma mais simples é a página na raiz do servidor (arquivo `wwwroot/index.html`), acessada pela URL onde o MCP estiver hospedado — ex.: `https://meu-servidor/` (rodando localmente, `http://localhost:5464/`):
+
+1. Informe a **chave MCP** (uma das `McpAuth:ApiKeys`) — ela vai no header das chamadas aos endpoints acima.
+2. Escolha a aba:
+   - **Gerar key** — por padrão grava na key a mesma chave MCP do passo 1 (desmarque a opção para informar outra); preencha, se quiser, a URL do projeto e a chave do Azure DevOps (vazios = usa a configuração do servidor). A página mostra a key gerada, a URL do `/mcp` e o comando `claude mcp add` pronto, com botões **Copiar**.
+   - **Decodificar key** — cole uma key e veja os três valores gravados nela.
+
+A página é pública, mas só chama os endpoints acima (que exigem a chave MCP) e não salva nada no navegador. Ela descobre a URL do servidor pelo endereço em que foi aberta, então funciona em qualquer host, inclusive atrás de proxy com prefixo.
+
+#### Endpoints para gerar e testar a key (Usados pela página acima)
+
+Dois endpoints protegidos: o header `x-api-key` leva a `mcp_api_key` em texto puro, conferida contra `McpAuth:ApiKeys` (fora da lista ou ausente → `401`). Nos exemplos abaixo, troque `https://meu-servidor` pela URL onde o MCP estiver hospedado.
 
 ```bash
 curl -X POST http://localhost:5464/api-key/generate -H "x-api-key: minha-chave-mcp" -H "Content-Type: application/json" -d "{\"mcpApiKey\":\"minha-chave-mcp\",\"azureUrl\":\"https://dev.azure.com/minha-org/meu-projeto\",\"azureApiKey\":\"<seu-PAT>\"}"
@@ -57,9 +70,16 @@ curl -X POST http://localhost:5464/api-key/generate -H "x-api-key: minha-chave-m
 curl -X POST http://localhost:5464/api-key/decode -H "x-api-key: minha-chave-mcp" -H "Content-Type: application/json" -d "{\"apiKey\":\"<key>\"}"
 ```
 
-Ou pela página web na raiz do servidor (arquivo `wwwroot/index.html`), acessada pela URL onde o MCP estiver hospedado — ex.: `https://meu-servidor/` (rodando localmente, `http://localhost:5464/`): informe a chave MCP de autenticação e preencha os campos de **Gerar** ou **Decodificar**. A página é pública, mas só chama os endpoints acima (que exigem a chave) e não salva nada no navegador.
-
 `generate` recebe o DTO `{ "mcpApiKey": "...", "azureUrl": "...", "azureApiKey": "..." }` e devolve `{ "apiKey": "..." }`; `decode` faz o inverso e devolve os três campos. Só `mcpApiKey` é obrigatório (sem ele, `400`): `azureUrl` e `azureApiKey` omitidos ou vazios saem como `null` no `decode` e fazem o servidor usar o Azure da configuração. Os mesmos valores geram keys diferentes a cada chamada (semente aleatória), todas válidas.
+
+#### Testando no Postman
+
+Na raiz do repositório há dois arquivos para importar no Postman (**Import**) e testar os endpoints de geração da API Key e as chamadas básicas do MCP:
+
+- `GenerateApiKey.postman_collection.json` — coleção com `POST /api-key/generate`, `POST /api-key/decode`, `1. Initialize` e `2. List Tools` (em `/mcp`);
+- `GenerateApiKey.postman_environment.json` — ambiente **GenerateApiKey - Local** com as variáveis `baseUrl` (padrão `http://localhost:5464`), `mcpApiKey`, `azureUrl`, `azureApiKey` e `apiKey`.
+
+Selecione o ambiente, preencha `mcpApiKey` (uma das `McpAuth:ApiKeys`) e, se quiser, `azureUrl`/`azureApiKey`, e troque `baseUrl` pela URL onde o MCP estiver hospedado. Rode as requisições na ordem: o `generate` grava a key gerada em `apiKey`, usada no header `x-api-key` das chamadas ao MCP; o `Initialize` guarda o `mcp-session-id` devolvido, enviado em seguida pelo `List Tools`.
 
 ### Projeto e chave de acesso
 
