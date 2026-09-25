@@ -40,6 +40,11 @@
   .field:first-child { margin-top: 0; }
   label { display: block; font-weight: 600; margin-bottom: 4px; }
   .help { color: var(--muted); font-size: 13px; margin: 4px 0 0; }
+  .guide { margin-top: 8px; font-size: 13.5px; color: var(--muted); }
+  .guide summary { cursor: pointer; color: var(--accent); font-weight: 600; }
+  .guide ol { margin: 8px 0 0; padding-left: 22px; display: grid; gap: 4px; }
+  .guide code { word-break: break-all; }
+  .guide p { margin: 8px 0 0; }
   .row { display: flex; gap: 8px; }
   .row > input, .row > textarea { flex: 1; min-width: 0; }
   input, textarea { width: 100%; padding: 9px 11px; border: 1px solid var(--border); border-radius: 6px;
@@ -134,7 +139,23 @@
             <input id="genAzureApiKey" type="password" autocomplete="off" placeholder="Personal Access Token (PAT) ou token do Entra">
             <button type="button" data-toggle="genAzureApiKey">Mostrar</button>
           </div>
-          <p class="help">Crie um PAT em <i>User settings → Personal access tokens</i> no Azure DevOps, com escopo <i>Work Items (Read &amp; write)</i>.</p>
+          <p class="help">Um PAT com permissão de <i>Work Items</i>, ou um token do Microsoft Entra ID.</p>
+          <details class="guide">
+            <summary>Como obter a URL do projeto e o PAT do Azure DevOps</summary>
+            <ol>
+              <li>Abra o board do Azure DevOps no navegador.</li>
+              <li>Copie a URL do board e cole no campo <b>URL do projeto</b>. Se quiser deixá-la limpa, fique só com o que vem
+                  antes de <code>/_boards</code>, sem a barra final. Exemplo: de
+                  <code>https://empresa.visualstudio.com/Projeto/_boards/board/t/Area/Equipe</code> fica
+                  <code>https://empresa.visualstudio.com/Projeto</code>. O servidor faz esse corte sozinho.</li>
+              <li>No canto superior direito da página, abra o menu <i>User settings</i> e escolha <i>Personal access tokens</i>.</li>
+              <li>Clique em <i>New Token</i>.</li>
+              <li>Preencha nome, organização e validade. Em <i>Scopes</i>, marque <i>Read, write, &amp; manage</i> em
+                  <i>Work Items</i> e clique em <i>Create</i>.</li>
+              <li>Copie o token gerado e cole no campo <b>Chave do Azure DevOps</b>. O Azure DevOps só mostra o token uma vez;
+                  se você o perder, será preciso gerar outro.</li>
+            </ol>
+          </details>
         </div>
         <p class="help">💡 Deixando URL e chave do Azure em branco, o servidor usa o projeto e a credencial da configuração dele.</p>
         <div class="actions">
@@ -163,6 +184,27 @@
             <button type="button" data-copy="usageClaude">Copiar</button>
           </div>
           <p class="help">Em conectores web (Claude Web, Copilot Studio), informe a URL <code id="usageUrl"></code> e o header <code>x-api-key</code> com a key acima.</p>
+          <details class="guide">
+            <summary>Como adicionar no Copilot Studio</summary>
+            <ol>
+              <li>No agente, abra <i>Tools</i>, clique em <i>Add a tool</i> → <i>New tool</i> → <i>Model Context Protocol</i>.</li>
+              <li>Preencha <i>Server name</i>, <i>Server description</i> (diga que o servidor lê, cria e atualiza cards do Azure DevOps — o agente usa isso para decidir quando chamá-lo) e, em <i>Server URL</i>, <code class="mcp-url"></code>.</li>
+              <li>Em <i>Authentication</i>, escolha <i>API key</i>, <i>Type</i> = <i>Header</i> e nome do header <code>x-api-key</code>. Clique em <i>Create</i>.</li>
+              <li>Na tela <i>Add tool</i>, escolha <i>Create a new connection</i>, cole a key gerada acima e clique em <i>Add to agent</i>.</li>
+            </ol>
+          </details>
+          <details class="guide">
+            <summary>Como adicionar no Claude Web (conector personalizado)</summary>
+            <ol>
+              <li>Planos Free, Pro e Max: vá em <i>Customize → Connectors</i> e clique em <i>Add custom connector</i>.
+                  Planos Team e Enterprise: um Owner vai em <i>Organization settings → Connectors</i> → <i>Add</i> → <i>Custom</i> → <i>Web</i>.</li>
+              <li>Em <i>MCP server URL</i>, informe <code class="mcp-url"></code>.</li>
+              <li>Em <i>Authentication</i>, escolha <i>No sign-in</i>.</li>
+              <li>Em <i>Request headers</i>, selecione <code>x-api-key</code>, cole a key gerada acima como valor, marque <i>Required</i> e clique em <i>Add</i>.</li>
+              <li>Na conversa, ligue o conector pelo botão <b>+</b> → <i>Connectors</i>.</li>
+            </ol>
+            <p>⚠️ <i>Request headers</i> está em beta e ainda não aparece para todas as organizações. O valor do header vale para todos que usam o conector: numa organização, todos agirão no Azure DevOps com o PAT gravado nessa key. O header não pode ser editado depois; para trocar a key, remova o conector e adicione de novo.</p>
+          </details>
         </div>
       </div>
     </div>
@@ -329,6 +371,7 @@
       });
       $('genOutput').value = data.apiKey;
       $('usageUrl').textContent = mcpUrl;
+      for (const el of document.querySelectorAll('.mcp-url')) el.textContent = mcpUrl;
       $('usageClaude').textContent =
         `claude mcp add --transport http azure-cards ${mcpUrl} --header "x-api-key: ${data.apiKey}"`;
     });

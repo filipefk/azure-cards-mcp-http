@@ -53,7 +53,7 @@ A forma mais simples é a página na raiz do servidor (arquivo `wwwroot/index.ht
 
 1. Informe a **chave MCP** (uma das `McpAuth:ApiKeys`) — ela vai no header das chamadas aos endpoints acima.
 2. Escolha a aba:
-   - **Gerar key** — por padrão grava na key a mesma chave MCP do passo 1 (desmarque a opção para informar outra); preencha, se quiser, a URL do projeto e a chave do Azure DevOps (vazios = usa a configuração do servidor). A página mostra a key gerada, a URL do `/mcp` e o comando `claude mcp add` pronto, com botões **Copiar**.
+   - **Gerar key** — por padrão grava na key a mesma chave MCP do passo 1 (desmarque a opção para informar outra); preencha, se quiser, a URL do projeto e a chave do Azure DevOps (vazios = usa a configuração do servidor). Abaixo do campo da chave, o bloco recolhível **Como obter a URL do projeto e o PAT do Azure DevOps** explica, passo a passo, como copiar a URL do board e criar um PAT (*User settings → Personal access tokens → New Token*, escopo *Work Items: Read, write, & manage*). A página mostra a key gerada, a URL do `/mcp` e o comando `claude mcp add` pronto, com botões **Copiar**. Em **Como usar**, dois blocos recolhíveis explicam como cadastrar o MCP como conector no **Copilot Studio** e no **Claude Web**, já com a URL do `/mcp` preenchida (veja também [Conectores web](#conectores-web)).
    - **Decodificar key** — cole uma key e veja os três valores gravados nela.
 
 A página é pública, mas só chama os endpoints acima (que exigem a chave MCP) e não salva nada no navegador. Ela descobre a URL do servidor pelo endereço em que foi aberta, então funciona em qualquer host, inclusive atrás de proxy com prefixo.
@@ -135,7 +135,12 @@ Gere a key em `/api-key/generate` ou pela página web (com os três campos, ou s
 claude mcp add --transport http azure-cards http://localhost:5464/mcp --header "x-api-key: <key>"
 ```
 
-Em conectores web (Copilot Studio, Claude Web), cadastre o mesmo header `x-api-key` com a key gerada.
+### Conectores web
+
+Em conectores web (Copilot Studio, Claude Web), cadastre a URL do `/mcp` e o mesmo header `x-api-key` com a key gerada:
+
+- **Copilot Studio** — no agente, *Tools → Add a tool → New tool → Model Context Protocol*; informe nome, descrição e a URL do `/mcp`; em *Authentication*, escolha *API key*, *Type* = *Header*, header `x-api-key`, e clique em *Create*; em *Add tool*, crie uma nova conexão colando a key e clique em *Add to agent*.
+- **Claude Web** — em *Customize → Connectors → Add custom connector* (Free/Pro/Max) ou, num plano Team/Enterprise, um Owner em *Organization settings → Connectors → Add → Custom → Web*; informe a URL do `/mcp`, escolha *No sign-in* e, em *Request headers*, selecione `x-api-key` com a key como valor (*Required*). *Request headers* está em beta e ainda não disponível para todas as organizações; o valor vale para todos que usam o conector (todos agem com o PAT gravado na key) e não pode ser editado depois — para trocar a key, remova e adicione o conector de novo.
 
 ## Tools
 
